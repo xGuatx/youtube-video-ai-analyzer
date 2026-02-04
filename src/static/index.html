@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Scanner - Détection IA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results-header {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+
+        .results-content {
+            background: white;
+            border: 2px solid #4CAF50;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .timecodes-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+        }
+
+        .timecode-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+        }
+
+        .timecode-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .timecode-item:last-child {
+            border-bottom: none;
+        }
+
+        .timecode-time {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        .timecode-confidence {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ffcdd2;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .export-btn {
+            background: #28a745;
+            margin-top: 20px;
+            width: auto;
+            display: inline-block;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .feature-description {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 YouTube Video Scanner</h1>
+            <p>Détection automatique d'objets dans les vidéos YouTube avec IA</p>
+        </div>
+
+        <div class="main-card">
+            <form id="scanForm">
+                <div class="form-group">
+                    <label for="url">URL de la vidéo YouTube</label>
+                    <input type="url" id="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required>
+                </div>
+
+                <div class="form-group">
+                    <label for="target_object">Objet à détecter</label>
+                    <input type="text" id="target_object" name="target_object" placeholder="person, child, car, etc." required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="detector">Détecteur IA</label>
+                        <select id="detector" name="detector">
+                            <option value="yolo">YOLO (Rapide)</option>
+                            <option value="opencv">OpenCV (Équilibré)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confidence_threshold">Seuil de confiance</label>
+                        <select id="confidence_threshold" name="confidence_threshold">
+                            <option value="0.3">30% (Plus de détections)</option>
+                            <option value="0.5" selected>50% (Équilibré)</option>
+                            <option value="0.7">70% (Plus précis)</option>
+                            <option value="0.9">90% (Très précis)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="interval_seconds">Intervalle d'analyse (secondes)</label>
+                        <select id="interval_seconds" name="interval_seconds">
+                            <option value="1">1 seconde (Très détaillé)</option>
+                            <option value="3">3 secondes (Détaillé)</option>
+                            <option value="5" selected>5 secondes (Standard)</option>
+                            <option value="10">10 secondes (Rapide)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max_frames">Limite de frames (optionnel)</label>
+                        <input type="number" id="max_frames" name="max_frames" placeholder="Ex: 100 pour limiter l'analyse">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="scanBtn">
+                    🚀 Démarrer l'analyse
+                </button>
+            </form>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Analyse en cours... Cela peut prendre plusieurs minutes selon la durée de la vidéo.</p>
+            </div>
+
+            <div class="error" id="error"></div>
+        </div>
+
+        <div class="results" id="results">
+            <div class="results-header">
+                <h2>📊 Résultats de l'analyse</h2>
+            </div>
+            <div class="results-content">
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be populated here -->
+                </div>
+
+                <h3>⏰ Timecodes détectés</h3>
+                <div class="timecodes-list" id="timecodesList">
+                    <!-- Timecodes will be populated here -->
+                </div>
+
+                <button class="btn export-btn" id="exportBtn">
+                    📥 Exporter en CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">IA Avancée</div>
+                <div class="feature-description">
+                    Utilise des modèles de deep learning comme YOLO pour une détection précise et rapide des objets.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Optimisé</div>
+                <div class="feature-description">
+                    Traitement parallèle et optimisations pour analyser efficacement les vidéos longues.
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <div class="feature-title">Conforme RGPD</div>
+                <div class="feature-description">
+                    Respecte la vie privée avec un traitement local des données et une conformité RGPD complète.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScanId = null;
+
+        document.getElementById('scanForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Convert numeric fields
+            data.confidence_threshold = parseFloat(data.confidence_threshold);
+            data.interval_seconds = parseInt(data.interval_seconds);
+            if (data.max_frames) {
+                data.max_frames = parseInt(data.max_frames);
+            }
+
+            showLoading(true);
+            hideError();
+            hideResults();
+
+            try {
+                const response = await fetch('/api/scanner/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentScanId = result.scan_id;
+                    displayResults(result);
+                } else {
+                    showError(result.error || 'Erreur lors de l\\'analyse');
+                }
+            } catch (error) {
+                showError('Erreur de connexion: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', async function() {
+            if (!currentScanId) return;
+
+            try {
+                const response = await fetch(`/api/scanner/scan/${currentScanId}/export`);
+                const result = await response.json();
+
+                if (result.success) {
+                    // Create and download CSV file
+                    const blob = new Blob([result.csv_content], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = result.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    showError('Erreur lors de l\\'export: ' + result.error);
+                }
+            } catch (error) {
+                showError('Erreur lors de l\\'export: ' + error.message);
+            }
+        });
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('scanBtn').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function hideResults() {
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            const statsGrid = document.getElementById('statsGrid');
+            const timecodesList = document.getElementById('timecodesList');
+
+            // Display stats
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${result.results.total_detections}</div>
+                    <div class="stat-label">Détections trouvées</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${(result.results.detection_rate * 100).toFixed(1)}%</div>
+                    <div class="stat-label">Taux de détection</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${Math.floor(result.results.video_duration / 60)}m ${Math.floor(result.results.video_duration % 60)}s</div>
+                    <div class="stat-label">Durée vidéo</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${result.results.frames_analyzed}</div>
+                    <div class="stat-label">Frames analysées</div>
+                </div>
+            `;
+
+            // Display timecodes
+            if (result.timecodes && result.timecodes.length > 0) {
+                timecodesList.innerHTML = result.timecodes.map(timecode => `
+                    <div class="timecode-item">
+                        <div class="timecode-time">${timecode.time_formatted}</div>
+                        <div class="timecode-confidence">${(timecode.confidence * 100).toFixed(1)}%</div>
+                    </div>
+                `).join('');
+            } else {
+                timecodesList.innerHTML = '<div class="timecode-item">Aucune détection trouvée</div>';
+            }
+
+            resultsDiv.style.display = 'block';
+        }
+
+        // Load available detectors on page load
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch('/api/scanner/detectors');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const detectorSelect = document.getElementById('detector');
+                    detectorSelect.innerHTML = result.detectors.map(detector => 
+                        `<option value="${detector}">${detector.toUpperCase()}</option>`
+                    ).join('');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des détecteurs:', error);
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,46 @@
+services:
+  youtube-scanner-local:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    ports:
+      - "5000:5000"
+      - "11434:11434"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app
+      - SCANNER_DATA_DIR=/app/data
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_MODELS=/app/data/ollama
+      - PREFER_LOCAL_AI=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/scanner/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - youtube-scanner-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  ollama-webui:
+    image: ghcr.io/ollama-webui/ollama-webui:main
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_API_BASE_URL=http://youtube-scanner-local:11434/api
+    depends_on:
+      - youtube-scanner-local
+    networks:
+      - youtube-scanner-network
+    profiles:
+      - webui
+
+networks:
+  youtube-scanner-network:
+    driver: bridge
